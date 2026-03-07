@@ -93,19 +93,35 @@ jobs:
           TAG="v${VERSION}"
           MERGE_BRANCH="merge/release-${TAG}-to-develop"
 
-          echo "Creating annotated tag '$TAG' on main..."
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
+          # Create tag (skip if already exists from a previous run)
+          if git rev-parse "$TAG" &>/dev/null; then
+            echo "Tag '$TAG' already exists, skipping."
+          else
+            echo "Creating annotated tag '$TAG' on main..."
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
 
-          echo "Creating back-merge branch '$MERGE_BRANCH'..."
-          git checkout -b "$MERGE_BRANCH" main
-          git push origin "$MERGE_BRANCH"
+          # Create back-merge branch (skip if already exists)
+          if git ls-remote --exit-code origin "refs/heads/$MERGE_BRANCH" &>/dev/null; then
+            echo "Branch '$MERGE_BRANCH' already exists, skipping."
+          else
+            echo "Creating back-merge branch '$MERGE_BRANCH'..."
+            git checkout -b "$MERGE_BRANCH" main
+            git push origin "$MERGE_BRANCH"
+          fi
 
-          echo "Creating back-merge PR to develop..."
-          gh pr create \
-            --base develop \
-            --head "$MERGE_BRANCH" \
-            --title "Merge $TAG into develop" \
-            --body "Automated back-merge of release $TAG into develop. Resolve any conflicts and merge."
+          # Create back-merge PR (skip if one already exists)
+          EXISTING_PR=$(gh pr list --base develop --head "$MERGE_BRANCH" --json number --jq '.[0].number' || true)
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Back-merge PR #$EXISTING_PR already exists, skipping."
+          else
+            echo "Creating back-merge PR to develop..."
+            gh pr create \
+              --base develop \
+              --head "$MERGE_BRANCH" \
+              --title "Merge $TAG into develop" \
+              --body "Automated back-merge of release $TAG into develop. Resolve any conflicts and merge."
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
