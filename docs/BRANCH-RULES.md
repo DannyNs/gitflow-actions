@@ -2,7 +2,30 @@
 
 Recommended GitHub branch protection settings to enforce Gitflow.
 
-## `main` Branch
+## Quick Setup with Rulesets (Recommended)
+
+Ready-to-import ruleset JSON files are included in the `rulesets/` directory. Apply them all at once:
+
+```bash
+# Apply to the current repository
+./scripts/apply-rulesets.sh
+
+# Apply to a specific repository
+./scripts/apply-rulesets.sh owner/repo
+
+# Preview without applying
+./scripts/apply-rulesets.sh owner/repo --dry-run
+```
+
+This creates three rulesets matching the manual configuration described below. You can also import them manually via **Settings > Rules > Rulesets > New ruleset > Import a ruleset**.
+
+---
+
+## Manual Setup
+
+If you prefer to configure rules manually (or use legacy branch protection instead of rulesets):
+
+### `main` Branch
 
 Go to **Settings > Branches > Add rule** and configure:
 
@@ -19,7 +42,7 @@ Go to **Settings > Branches > Add rule** and configure:
 - **Do not allow bypassing the above settings:** Yes (recommended)
 - **Restrict who can push to matching branches:** Only allow merge via PR
 
-## `develop` Branch
+### `develop` Branch
 
 - **Branch name pattern:** `develop`
 - **Require a pull request before merging:** Yes
@@ -31,7 +54,7 @@ Go to **Settings > Branches > Add rule** and configure:
 - **Require branches to be up to date before merging:** Yes
 - **Do not allow bypassing the above settings:** Optional
 
-## `release/*` Branches (Optional)
+### `release/*` Branches (Optional)
 
 If you want to protect active release branches:
 
@@ -43,5 +66,5 @@ If you want to protect active release branches:
 ## Notes
 
 - The `GITHUB_TOKEN` used by workflows needs write access to create tags and PRs. This is the default for non-fork PRs.
-- If you use **Rulesets** (newer GitHub feature) instead of branch protection rules, the same settings apply — just configured through the Rulesets UI.
-- For organizations, consider setting these rules at the organization level using repository rulesets.
+- The included ruleset files use the GitHub Rulesets format (not legacy branch protection). Rulesets are the recommended approach and support import/export via UI and API.
+- For organizations, consider applying rulesets at the organization level for consistent enforcement across repositories.
