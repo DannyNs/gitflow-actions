@@ -1,0 +1,36 @@
+name: Branch Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  delete-branch:
+    name: Delete Merged Branch
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Delete head branch
+        run: |
+          BRANCH="${{ github.head_ref }}"
+
+          # Safety: never delete main or develop
+          if [[ "$BRANCH" == "main" || "$BRANCH" == "develop" ]]; then
+            echo "Skipping deletion of protected branch '$BRANCH'."
+            exit 0
+          fi
+
+          # Safety: skip fork PRs
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]]; then
+            echo "Skipping deletion — branch is from a fork."
+            exit 0
+          fi
+
+          echo "Deleting branch '$BRANCH'..."
+          git push origin --delete "$BRANCH" || echo "Branch '$BRANCH' may have already been deleted."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

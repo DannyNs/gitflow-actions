@@ -1,0 +1,40 @@
+name: Branch Name Validation
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - develop
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-branch-name:
+    name: Validate Branch Name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          PATTERN='^(main|develop|feature/.+|release/.+|hotfix/.+|merge/.+)$'
+
+          if [[ ! "$BRANCH" =~ $PATTERN ]]; then
+            echo "::error::Invalid branch name: '$BRANCH'"
+            echo ""
+            echo "Branch names must match one of the following patterns:"
+            echo "  main"
+            echo "  develop"
+            echo "  feature/<name>"
+            echo "  release/<version>"
+            echo "  hotfix/<version>"
+            echo "  merge/<name>"
+            exit 1
+          fi
+
+          echo "Branch name '$BRANCH' is valid."

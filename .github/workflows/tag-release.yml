@@ -1,0 +1,61 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine release properties
+        id: meta
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          # Pre-release if tag contains a hyphen (e.g., v1.0.0-rc.1)
+          if [[ "$TAG" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Find previous tag for release notes range
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | grep -v "^${TAG}$" | head -n 1 || true)
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "previous_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+            echo "Previous tag: $PREV_TAG"
+          else
+            echo "No previous tag found. Release notes will cover all commits."
+          fi
+
+      - name: Create GitHub Release
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          PRERELEASE="${{ steps.meta.outputs.prerelease }}"
+
+          FLAGS=(--generate-notes)
+          if [[ "$PRERELEASE" == "true" ]]; then
+            FLAGS+=(--prerelease)
+          fi
+
+          PREV_TAG="${{ steps.meta.outputs.previous_tag }}"
+          if [[ -n "$PREV_TAG" ]]; then
+            FLAGS+=(--notes-start-tag "$PREV_TAG")
+          fi
+
+          gh release create "$TAG" "${FLAGS[@]}" --title "$TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

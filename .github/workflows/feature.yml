@@ -1,0 +1,50 @@
+name: Feature Branch CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - develop
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Feature Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check source branch
+        run: |
+          SOURCE="${{ github.head_ref }}"
+
+          if [[ "$SOURCE" != feature/* ]]; then
+            echo "::notice::Source branch '$SOURCE' is not a feature branch. Skipping feature CI."
+            exit 0
+          fi
+
+          echo "Feature branch '$SOURCE' validated."
+
+  checks:
+    name: Run Checks
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Placeholder - Add your build/test/lint steps here
+        run: |
+          echo "==========================================="
+          echo "  Add your CI steps to this job."
+          echo ""
+          echo "  Examples:"
+          echo "    - npm ci && npm test"
+          echo "    - cargo build && cargo test"
+          echo "    - go build ./... && go test ./..."
+          echo "==========================================="

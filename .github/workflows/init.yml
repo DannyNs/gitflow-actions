@@ -1,0 +1,40 @@
+name: Initialize Gitflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm creating the develop branch'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  init:
+    name: Create Develop Branch
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'yes'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create develop branch
+        run: |
+          if git ls-remote --heads origin develop | grep -q develop; then
+            echo "Branch 'develop' already exists. Nothing to do."
+            exit 0
+          fi
+
+          echo "Creating 'develop' branch from 'main'..."
+          git checkout -b develop main
+          git push -u origin develop
+
+          echo "Gitflow initialized. Branch 'develop' has been created from 'main'."
+          echo ""
+          echo "Next steps:"
+          echo "  1. Set up branch protection rules for 'main' and 'develop'"
+          echo "  2. Start working with feature branches"

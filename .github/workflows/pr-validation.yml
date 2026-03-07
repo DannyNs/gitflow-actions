@@ -1,0 +1,73 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches:
+      - main
+      - develop
+      - 'release/**'
+  workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-pr-target:
+    name: Validate PR Target
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce Gitflow PR routing
+        run: |
+          SOURCE="${{ github.head_ref }}"
+          TARGET="${{ github.base_ref }}"
+
+          echo "Source branch: $SOURCE"
+          echo "Target branch: $TARGET"
+
+          VALID=false
+
+          case "$SOURCE" in
+            feature/*)
+              if [[ "$TARGET" == "develop" ]]; then
+                VALID=true
+              fi
+              ALLOWED="develop"
+              ;;
+            release/*)
+              if [[ "$TARGET" == "main" || "$TARGET" == "develop" ]]; then
+                VALID=true
+              fi
+              ALLOWED="main, develop"
+              ;;
+            hotfix/*)
+              if [[ "$TARGET" == "main" || "$TARGET" == "develop" ]]; then
+                VALID=true
+              fi
+              ALLOWED="main, develop"
+              ;;
+            merge/*)
+              if [[ "$TARGET" == "develop" || "$TARGET" == release/* ]]; then
+                VALID=true
+              fi
+              ALLOWED="develop, release/*"
+              ;;
+            *)
+              echo "::error::Branch '$SOURCE' does not follow Gitflow naming conventions."
+              echo "Valid prefixes: feature/, release/, hotfix/, merge/"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$VALID" != "true" ]]; then
+            echo "::error::Invalid PR target: '$SOURCE' cannot target '$TARGET'."
+            echo "Allowed targets for '${SOURCE%%/*}/*' branches: $ALLOWED"
+            exit 1
+          fi
+
+          echo "PR routing is valid: '$SOURCE' -> '$TARGET'"

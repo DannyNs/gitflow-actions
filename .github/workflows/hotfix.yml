@@ -1,0 +1,126 @@
+name: Hotfix Workflow
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+  workflow_call:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-hotfix:
+    name: Validate Hotfix
+    runs-on: ubuntu-latest
+    if: >-
+      startsWith(github.head_ref, 'hotfix/') &&
+      github.event.action != 'closed'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate hotfix version
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          VERSION="${BRANCH#hotfix/}"
+          SEMVER_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'
+
+          echo "Hotfix version: $VERSION"
+
+          # Validate semver format
+          if [[ ! "$VERSION" =~ $SEMVER_PATTERN ]]; then
+            echo "::error::Invalid semver version: '$VERSION'"
+            echo "Expected format: MAJOR.MINOR.PATCH (e.g., 1.2.1)"
+            exit 1
+          fi
+
+          # Check if tag already exists
+          if git rev-parse "v${VERSION}" &>/dev/null; then
+            echo "::error::Tag 'v${VERSION}' already exists."
+            exit 1
+          fi
+
+          # Verify version is greater than latest tag
+          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)
+          if [[ -n "$LATEST_TAG" ]]; then
+            LATEST_VERSION="${LATEST_TAG#v}"
+            echo "Latest tag: $LATEST_TAG"
+
+            HIGHER=$(printf '%s\n%s' "$LATEST_VERSION" "$VERSION" | sort -V | tail -n 1)
+            if [[ "$HIGHER" == "$LATEST_VERSION" ]]; then
+              echo "::error::Version '$VERSION' is not greater than latest tag '$LATEST_TAG'."
+              exit 1
+            fi
+          fi
+
+          echo "Version '$VERSION' is valid."
+
+  post-merge:
+    name: Post-Merge Hotfix
+    runs-on: ubuntu-latest
+    if: >-
+      startsWith(github.head_ref, 'hotfix/') &&
+      github.event.pull_request.merged == true
+    concurrency:
+      group: post-merge-hotfix-${{ github.head_ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create tag and back-merge PRs
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          VERSION="${BRANCH#hotfix/}"
+          TAG="v${VERSION}"
+
+          echo "Creating annotated tag '$TAG' on main..."
+          git tag -a "$TAG" -m "Hotfix $TAG"
+          git push origin "$TAG"
+
+          # Back-merge to develop
+          MERGE_BRANCH_DEV="merge/hotfix-${TAG}-to-develop"
+          echo "Creating back-merge branch '$MERGE_BRANCH_DEV'..."
+          git checkout -b "$MERGE_BRANCH_DEV" main
+          git push origin "$MERGE_BRANCH_DEV"
+
+          echo "Creating back-merge PR to develop..."
+          gh pr create \
+            --base develop \
+            --head "$MERGE_BRANCH_DEV" \
+            --title "Merge hotfix $TAG into develop" \
+            --body "Automated back-merge of hotfix $TAG into develop. Resolve any conflicts and merge."
+
+          # Detect active release branches and back-merge to them
+          git fetch origin
+          RELEASE_BRANCHES=$(git branch -r | grep 'origin/release/' | sed 's|origin/||' | xargs || true)
+
+          for RELEASE in $RELEASE_BRANCHES; do
+            RELEASE_NAME=$(echo "$RELEASE" | tr '/' '-')
+            MERGE_BRANCH_REL="merge/hotfix-${TAG}-to-${RELEASE_NAME}"
+
+            echo "Creating back-merge branch '$MERGE_BRANCH_REL' for '$RELEASE'..."
+            git checkout -b "$MERGE_BRANCH_REL" main
+            git push origin "$MERGE_BRANCH_REL"
+
+            echo "Creating back-merge PR to '$RELEASE'..."
+            gh pr create \
+              --base "$RELEASE" \
+              --head "$MERGE_BRANCH_REL" \
+              --title "Merge hotfix $TAG into $RELEASE" \
+              --body "Automated back-merge of hotfix $TAG into $RELEASE. Resolve any conflicts and merge."
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
