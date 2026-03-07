@@ -95,18 +95,17 @@ Any PR that violates these rules will fail the validation check.
 
 ## Branch Protection Setup
 
-For full enforcement, configure branch protection rules on `main` and `develop`. See [docs/BRANCH-RULES.md](docs/BRANCH-RULES.md) for step-by-step instructions.
+Ready-to-import ruleset configurations are included in the `rulesets/` directory. Apply them with a single command:
 
-### Minimum recommended settings:
+```bash
+./scripts/apply-rulesets.sh
+```
 
-**`main`:**
-- Require PR with approvals
-- Require status checks: `Validate PR Target`, `Validate Release`, `Validate Hotfix`
-- No direct pushes
+This creates rulesets for `main`, `develop`, and optionally `release/*` branches with the correct status checks pre-configured. Use `--dry-run` to preview before applying.
 
-**`develop`:**
-- Require PR with approvals
-- Require status checks: `Validate PR Target`, `Run Checks`
+You can also import the JSON files manually via **Settings > Rules > Rulesets > Import a ruleset**.
+
+See [docs/BRANCH-RULES.md](docs/BRANCH-RULES.md) for full details and manual setup instructions.
 
 ## Customization
 

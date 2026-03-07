@@ -115,5 +115,5 @@ Organization members will see these templates under **Actions > New workflow** i
 ## After Importing
 
 1. **Initialize Gitflow:** Run the init workflow or `scripts/init-gitflow.sh` to create the `develop` branch
-2. **Set up branch protection:** Follow [BRANCH-RULES.md](BRANCH-RULES.md)
+2. **Apply branch rulesets:** Run `./scripts/apply-rulesets.sh` to configure branch protection automatically (or follow [BRANCH-RULES.md](BRANCH-RULES.md) for manual setup)
 3. **Customize CI:** Edit `feature.yml` to add your build/test/lint steps
