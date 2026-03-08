@@ -111,7 +111,7 @@ See [docs/BRANCH-RULES.md](docs/BRANCH-RULES.md) for full details and manual set
 
 ### Adding CI Steps
 
-Edit the `checks` job in `feature.yml` to add your build, test, and lint steps:
+Edit the `checks` job in `feature.yml` to add your build, test, and lint steps. Keep the `if:` condition on each step so that non-feature PRs (like back-merge PRs) pass without running CI:
 
 ```yaml
 # In .github/workflows/feature.yml
@@ -120,15 +120,23 @@ checks:
   runs-on: ubuntu-latest
   needs: validate
   steps:
+    - name: Skip non-feature branches
+      if: needs.validate.outputs.is_feature != 'true'
+      run: echo "Not a feature branch — skipping CI checks."
+
     - uses: actions/checkout@v4
+      if: needs.validate.outputs.is_feature == 'true'
 
     - name: Install dependencies
+      if: needs.validate.outputs.is_feature == 'true'
       run: npm ci
 
     - name: Lint
+      if: needs.validate.outputs.is_feature == 'true'
       run: npm run lint
 
     - name: Test
+      if: needs.validate.outputs.is_feature == 'true'
       run: npm test
 ```
 
