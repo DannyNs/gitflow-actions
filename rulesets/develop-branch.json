@@ -41,10 +41,6 @@
           {
             "context": "Validate PR Target",
             "integration_id": 15368
-          },
-          {
-            "context": "Run Checks",
-            "integration_id": 15368
           }
         ]
       }
