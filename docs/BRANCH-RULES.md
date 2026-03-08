@@ -46,9 +46,8 @@ Go to **Settings > Branches > Add rule** and configure:
 - **Require a pull request before merging:** Yes
   - **Required approving reviews:** 1 (or more)
 - **Require status checks to pass before merging:** Yes
-  - Add these required checks:
+  - Add this required check:
     - `Validate PR Target` (from `pr-validation.yml`)
-    - `Run Checks` (from `feature.yml`)
 - **Require branches to be up to date before merging:** Yes
 - **Do not allow bypassing the above settings:** Optional
 
