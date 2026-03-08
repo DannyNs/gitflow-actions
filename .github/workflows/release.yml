@@ -91,6 +91,7 @@ jobs:
         env:
           BRANCH: ${{ github.head_ref }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           VERSION="${BRANCH#release/}"
           TAG="v${VERSION}"
@@ -110,19 +111,25 @@ jobs:
             echo "Branch '$MERGE_BRANCH' already exists, skipping."
           else
             echo "Creating back-merge branch '$MERGE_BRANCH'..."
-            git checkout -b "$MERGE_BRANCH" main
+            git checkout -b "$MERGE_BRANCH" origin/main
             git push origin "$MERGE_BRANCH"
           fi
 
           # Create back-merge PR (skip if one already exists)
-          EXISTING_PR=$(gh pr list --base develop --head "$MERGE_BRANCH" --json number --jq '.[0].number' || true)
-          if [[ -n "$EXISTING_PR" ]]; then
+          EXISTING_PR=$(gh pr list --repo "$REPO" --base develop --head "$MERGE_BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [[ -n "$EXISTING_PR" && "$EXISTING_PR" != "null" ]]; then
             echo "Back-merge PR #$EXISTING_PR already exists, skipping."
           else
             echo "Creating back-merge PR to develop..."
-            gh pr create \
+            if PR_URL=$(gh pr create \
+              --repo "$REPO" \
               --base develop \
               --head "$MERGE_BRANCH" \
               --title "Merge $TAG into develop" \
-              --body "Automated back-merge of release $TAG into develop. Resolve any conflicts and merge."
+              --body "Automated back-merge of release $TAG into develop. Resolve any conflicts and merge." 2>&1); then
+              echo "Created back-merge PR: $PR_URL"
+            else
+              echo "::warning::Failed to create back-merge PR: $PR_URL"
+              echo "Create it manually: https://github.com/$REPO/compare/develop...$MERGE_BRANCH"
+            fi
           fi
