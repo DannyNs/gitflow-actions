@@ -41,14 +41,6 @@
           {
             "context": "Validate PR Target",
             "integration_id": 15368
-          },
-          {
-            "context": "Validate Release",
-            "integration_id": 15368
-          },
-          {
-            "context": "Validate Hotfix",
-            "integration_id": 15368
           }
         ]
       }

@@ -34,10 +34,8 @@ Go to **Settings > Branches > Add rule** and configure:
   - **Required approving reviews:** 1 (or more)
   - **Dismiss stale pull request approvals when new commits are pushed:** Yes
 - **Require status checks to pass before merging:** Yes
-  - Add these required checks:
+  - Add this required check:
     - `Validate PR Target` (from `pr-validation.yml`)
-    - `Validate Release` (from `release.yml`)
-    - `Validate Hotfix` (from `hotfix.yml`)
 - **Require branches to be up to date before merging:** Yes
 - **Do not allow bypassing the above settings:** Yes (recommended)
 - **Restrict who can push to matching branches:** Only allow merge via PR
@@ -66,5 +64,7 @@ If you want to protect active release branches:
 ## Notes
 
 - The `GITHUB_TOKEN` used by workflows needs write access to create tags and PRs. This is the default for non-fork PRs.
+- Tags pushed with `GITHUB_TOKEN` do not trigger subsequent workflows (GitHub limitation). To enable automatic GitHub Releases via `tag-release.yml`, use a Personal Access Token or GitHub App token — see the [Customization section](../README.md#using-a-custom-token) in the README.
 - The included ruleset files use the GitHub Rulesets format (not legacy branch protection). Rulesets are the recommended approach and support import/export via UI and API.
+- The `integration_id: 15368` in ruleset files is the GitHub.com Actions app ID. For GitHub Enterprise Server, you may need to update this value.
 - For organizations, consider applying rulesets at the organization level for consistent enforcement across repositories.

@@ -15,7 +15,7 @@ jobs:
   init:
     name: Create Develop Branch
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm == 'yes'
+    if: inputs.confirm == 'yes'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

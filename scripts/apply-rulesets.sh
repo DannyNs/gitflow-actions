@@ -54,6 +54,11 @@ if ! gh auth status &>/dev/null; then
   exit 1
 fi
 
+if ! command -v jq &>/dev/null && ! command -v python3 &>/dev/null; then
+  echo -e "${RED}Error: Either 'jq' or 'python3' is required to parse JSON. Install one of them.${NC}"
+  exit 1
+fi
+
 # Resolve repository
 if [[ -z "$REPO" ]]; then
   REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || true)
