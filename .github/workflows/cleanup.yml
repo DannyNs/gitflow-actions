@@ -33,5 +33,11 @@ jobs:
             exit 0
           fi
 
+          # Safety: validate branch name matches expected Gitflow patterns
+          if [[ ! "$BRANCH" =~ ^(feature|release|hotfix|merge)/ ]]; then
+            echo "Skipping deletion — branch '$BRANCH' does not match a Gitflow pattern."
+            exit 0
+          fi
+
           echo "Deleting branch '$BRANCH'..."
           gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || echo "Branch '$BRANCH' may have already been deleted."
