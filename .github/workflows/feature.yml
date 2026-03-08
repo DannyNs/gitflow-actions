@@ -38,12 +38,17 @@ jobs:
     name: Run Checks
     runs-on: ubuntu-latest
     needs: validate
-    if: needs.validate.outputs.is_feature == 'true'
     steps:
+      - name: Skip non-feature branches
+        if: needs.validate.outputs.is_feature != 'true'
+        run: echo "Not a feature branch — skipping CI checks."
+
       - name: Checkout code
+        if: needs.validate.outputs.is_feature == 'true'
         uses: actions/checkout@v4
 
       - name: Placeholder - Add your build/test/lint steps here
+        if: needs.validate.outputs.is_feature == 'true'
         run: |
           echo "==========================================="
           echo "  Add your CI steps to this job."

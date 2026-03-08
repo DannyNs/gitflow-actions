@@ -49,6 +49,12 @@ jobs:
           PREV_TAG: ${{ steps.meta.outputs.previous_tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Skip if release already exists (idempotent on re-run)
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Release '$TAG' already exists, skipping."
+            exit 0
+          fi
+
           FLAGS=(--generate-notes)
           if [[ "$PRERELEASE" == "true" ]]; then
             FLAGS+=(--prerelease)
