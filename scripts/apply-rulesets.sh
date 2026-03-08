@@ -102,6 +102,24 @@ apply_ruleset() {
   fi
 }
 
+# Enable workflow permissions for PR creation (required for back-merge automation)
+echo "Configuring workflow permissions..."
+echo ""
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo -e "${CYAN}  Would enable:${NC} Allow GitHub Actions to create pull requests"
+else
+  if gh api "repos/${REPO}/actions/permissions/workflow" \
+    --method PUT \
+    --field can_approve_pull_request_reviews=true \
+    --silent 2>/dev/null; then
+    echo -e "${GREEN}  Enabled:${NC} Allow GitHub Actions to create pull requests"
+  else
+    echo -e "${YELLOW}  Warning:${NC} Could not update workflow permissions (may require admin access)"
+  fi
+fi
+
+echo ""
+
 # Apply main and develop rulesets
 echo "Applying rulesets..."
 echo ""
