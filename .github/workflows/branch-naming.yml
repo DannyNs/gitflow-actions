@@ -20,8 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check branch name
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
-          BRANCH="${{ github.ref_name }}"
           PATTERN='^(main|develop|feature/.+|release/.+|hotfix/.+|merge/.+)$'
 
           if [[ ! "$BRANCH" =~ $PATTERN ]]; then

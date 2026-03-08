@@ -134,9 +134,11 @@ checks:
 
 ### Using a Custom Token
 
-If your branch protection rules prevent `GITHUB_TOKEN` from pushing tags or creating PRs, pass a Personal Access Token or GitHub App token:
+Tags pushed with the default `GITHUB_TOKEN` do **not** trigger subsequent workflows (this is a GitHub limitation to prevent infinite loops). This means `tag-release.yml` won't run automatically unless you use a custom token.
 
-1. Create a repository secret (e.g., `GIT_TOKEN`)
+To enable automatic GitHub Releases and allow tag/branch pushes through rulesets:
+
+1. Create a repository secret (e.g., `GIT_TOKEN`) with a Personal Access Token or GitHub App token
 2. In `release.yml` and `hotfix.yml`, replace `secrets.GITHUB_TOKEN` with `secrets.GIT_TOKEN`
 
 ## How It Works

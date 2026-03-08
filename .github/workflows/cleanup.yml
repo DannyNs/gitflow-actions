@@ -15,9 +15,12 @@ jobs:
     if: github.event.pull_request.merged == true
     steps:
       - name: Delete head branch
+        env:
+          BRANCH: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="${{ github.head_ref }}"
-
           # Safety: never delete main or develop
           if [[ "$BRANCH" == "main" || "$BRANCH" == "develop" ]]; then
             echo "Skipping deletion of protected branch '$BRANCH'."
@@ -25,12 +28,10 @@ jobs:
           fi
 
           # Safety: skip fork PRs
-          if [[ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]]; then
+          if [[ "$HEAD_REPO" != "$REPO" ]]; then
             echo "Skipping deletion — branch is from a fork."
             exit 0
           fi
 
           echo "Deleting branch '$BRANCH'..."
-          git push origin --delete "$BRANCH" || echo "Branch '$BRANCH' may have already been deleted."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || echo "Branch '$BRANCH' may have already been deleted."
