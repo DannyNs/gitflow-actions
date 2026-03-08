@@ -63,6 +63,7 @@ If you want to protect active release branches:
 ## Notes
 
 - The `GITHUB_TOKEN` used by workflows needs write access to create tags and PRs. This is the default for non-fork PRs.
+- **"Allow GitHub Actions to create and approve pull requests"** must be enabled in **Settings > Actions > General > Workflow permissions**. This is required for the release workflow to create back-merge PRs. The `apply-rulesets.sh` script enables this automatically.
 - Tags pushed with `GITHUB_TOKEN` do not trigger subsequent workflows (GitHub limitation). To enable automatic GitHub Releases via `tag-release.yml`, use a Personal Access Token or GitHub App token — see the [Customization section](../README.md#using-a-custom-token) in the README.
 - The included ruleset files use the GitHub Rulesets format (not legacy branch protection). Rulesets are the recommended approach and support import/export via UI and API.
 - The `integration_id: 15368` in ruleset files is the GitHub.com Actions app ID. For GitHub Enterprise Server, you may need to update this value.
