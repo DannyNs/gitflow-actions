@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Enforce Gitflow PR routing
+        env:
+          SOURCE: ${{ github.head_ref }}
+          TARGET: ${{ github.base_ref }}
         run: |
-          SOURCE="${{ github.head_ref }}"
-          TARGET="${{ github.base_ref }}"
-
           echo "Source branch: $SOURCE"
           echo "Target branch: $TARGET"
 
@@ -52,6 +52,7 @@ jobs:
               ALLOWED="main, develop"
               ;;
             merge/*)
+              # Unquoted release/* is intentional — pattern matching in [[ ]]
               if [[ "$TARGET" == "develop" || "$TARGET" == release/* ]]; then
                 VALID=true
               fi

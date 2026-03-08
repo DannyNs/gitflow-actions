@@ -21,8 +21,9 @@ jobs:
 
       - name: Determine release properties
         id: meta
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          TAG="${{ github.ref_name }}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
           # Pre-release if tag contains a hyphen (e.g., v1.0.0-rc.1)
@@ -32,8 +33,8 @@ jobs:
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
-          # Find previous tag for release notes range
-          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | grep -v "^${TAG}$" | head -n 1 || true)
+          # Find previous stable tag for release notes range
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${TAG}$" | head -n 1 || true)
           if [[ -n "$PREV_TAG" ]]; then
             echo "previous_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
             echo "Previous tag: $PREV_TAG"
@@ -42,20 +43,19 @@ jobs:
           fi
 
       - name: Create GitHub Release
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+          PREV_TAG: ${{ steps.meta.outputs.previous_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.meta.outputs.tag }}"
-          PRERELEASE="${{ steps.meta.outputs.prerelease }}"
-
           FLAGS=(--generate-notes)
           if [[ "$PRERELEASE" == "true" ]]; then
             FLAGS+=(--prerelease)
           fi
 
-          PREV_TAG="${{ steps.meta.outputs.previous_tag }}"
           if [[ -n "$PREV_TAG" ]]; then
             FLAGS+=(--notes-start-tag "$PREV_TAG")
           fi
 
           gh release create "$TAG" "${FLAGS[@]}" --title "$TAG"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

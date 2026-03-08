@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   validate-hotfix:
@@ -29,8 +29,9 @@ jobs:
           fetch-depth: 0
 
       - name: Validate hotfix version
+        env:
+          BRANCH: ${{ github.head_ref }}
         run: |
-          BRANCH="${{ github.head_ref }}"
           VERSION="${BRANCH#hotfix/}"
           SEMVER_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'
 
@@ -50,7 +51,7 @@ jobs:
           fi
 
           # Verify version is greater than latest tag
-          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)
+          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
           if [[ -n "$LATEST_TAG" ]]; then
             LATEST_VERSION="${LATEST_TAG#v}"
             echo "Latest tag: $LATEST_TAG"
@@ -86,8 +87,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Create tag and back-merge PRs
+        env:
+          BRANCH: ${{ github.head_ref }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="${{ github.head_ref }}"
           VERSION="${BRANCH#hotfix/}"
           TAG="v${VERSION}"
 
@@ -123,8 +126,7 @@ jobs:
           fi
 
           # Detect active release branches and back-merge to them
-          git fetch origin
-          RELEASE_BRANCHES=$(git branch -r | grep 'origin/release/' | sed 's|origin/||' | xargs || true)
+          RELEASE_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/release/ | sed 's|^origin/||' || true)
 
           for RELEASE in $RELEASE_BRANCHES; do
             RELEASE_NAME=$(echo "$RELEASE" | tr '/' '-')
@@ -150,5 +152,3 @@ jobs:
                 --body "Automated back-merge of hotfix $TAG into $RELEASE. Resolve any conflicts and merge."
             fi
           done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
