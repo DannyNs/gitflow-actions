@@ -140,8 +140,15 @@ done
 RELEASE_FILE="$RULESETS_DIR/release-branches.json"
 if [[ -f "$RELEASE_FILE" ]]; then
   echo ""
-  read -rp "Apply release branch protection? (recommended) [Y/n]: " APPLY_RELEASE
-  APPLY_RELEASE="${APPLY_RELEASE:-Y}"
+  if [[ -t 0 ]]; then
+    # Interactive mode: prompt the user
+    read -rp "Apply release branch protection? (recommended) [Y/n]: " APPLY_RELEASE
+    APPLY_RELEASE="${APPLY_RELEASE:-Y}"
+  else
+    # Non-interactive mode (piped/CI): apply by default
+    APPLY_RELEASE="Y"
+    echo "Non-interactive mode detected — applying release branch protection by default."
+  fi
   if [[ "$APPLY_RELEASE" =~ ^[Yy]$ ]]; then
     apply_ruleset "$RELEASE_FILE" || ERRORS=$((ERRORS + 1))
   else

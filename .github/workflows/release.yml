@@ -33,7 +33,7 @@ jobs:
           BRANCH: ${{ github.head_ref }}
         run: |
           VERSION="${BRANCH#release/}"
-          SEMVER_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'
+          SEMVER_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+$'
 
           echo "Release version: $VERSION"
 

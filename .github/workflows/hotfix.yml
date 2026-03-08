@@ -33,7 +33,7 @@ jobs:
           BRANCH: ${{ github.head_ref }}
         run: |
           VERSION="${BRANCH#hotfix/}"
-          SEMVER_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'
+          SEMVER_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+$'
 
           echo "Hotfix version: $VERSION"
 
@@ -90,6 +90,7 @@ jobs:
         env:
           BRANCH: ${{ github.head_ref }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           VERSION="${BRANCH#hotfix/}"
           TAG="v${VERSION}"
@@ -109,26 +110,38 @@ jobs:
             echo "Branch '$MERGE_BRANCH_DEV' already exists, skipping."
           else
             echo "Creating back-merge branch '$MERGE_BRANCH_DEV'..."
-            git checkout -b "$MERGE_BRANCH_DEV" main
+            git checkout -b "$MERGE_BRANCH_DEV" origin/main
             git push origin "$MERGE_BRANCH_DEV"
           fi
 
-          EXISTING_PR=$(gh pr list --base develop --head "$MERGE_BRANCH_DEV" --json number --jq '.[0].number' || true)
-          if [[ -n "$EXISTING_PR" ]]; then
+          EXISTING_PR=$(gh pr list --repo "$REPO" --base develop --head "$MERGE_BRANCH_DEV" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [[ -n "$EXISTING_PR" && "$EXISTING_PR" != "null" ]]; then
             echo "Back-merge PR #$EXISTING_PR to develop already exists, skipping."
           else
             echo "Creating back-merge PR to develop..."
-            gh pr create \
+            if PR_URL=$(gh pr create \
+              --repo "$REPO" \
               --base develop \
               --head "$MERGE_BRANCH_DEV" \
               --title "Merge hotfix $TAG into develop" \
-              --body "Automated back-merge of hotfix $TAG into develop. Resolve any conflicts and merge."
+              --body "Automated back-merge of hotfix $TAG into develop. Resolve any conflicts and merge." 2>&1); then
+              echo "Created back-merge PR: $PR_URL"
+            else
+              echo "::warning::Failed to create back-merge PR to develop: $PR_URL"
+              echo "Create it manually: https://github.com/$REPO/compare/develop...$MERGE_BRANCH_DEV"
+            fi
           fi
 
           # Detect active release branches and back-merge to them
           RELEASE_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/release/ | sed 's|^origin/||' || true)
 
           for RELEASE in $RELEASE_BRANCHES; do
+            # Skip release branches that are already merged into main
+            if git merge-base --is-ancestor "origin/$RELEASE" origin/main 2>/dev/null; then
+              echo "Branch '$RELEASE' is already merged into main, skipping."
+              continue
+            fi
+
             RELEASE_NAME=$(echo "$RELEASE" | tr '/' '-')
             MERGE_BRANCH_REL="merge/hotfix-${TAG}-to-${RELEASE_NAME}"
 
@@ -136,19 +149,25 @@ jobs:
               echo "Branch '$MERGE_BRANCH_REL' already exists, skipping."
             else
               echo "Creating back-merge branch '$MERGE_BRANCH_REL' for '$RELEASE'..."
-              git checkout -b "$MERGE_BRANCH_REL" main
+              git checkout -b "$MERGE_BRANCH_REL" origin/main
               git push origin "$MERGE_BRANCH_REL"
             fi
 
-            EXISTING_REL_PR=$(gh pr list --base "$RELEASE" --head "$MERGE_BRANCH_REL" --json number --jq '.[0].number' || true)
-            if [[ -n "$EXISTING_REL_PR" ]]; then
+            EXISTING_REL_PR=$(gh pr list --repo "$REPO" --base "$RELEASE" --head "$MERGE_BRANCH_REL" --json number --jq '.[0].number' 2>/dev/null || true)
+            if [[ -n "$EXISTING_REL_PR" && "$EXISTING_REL_PR" != "null" ]]; then
               echo "Back-merge PR #$EXISTING_REL_PR to '$RELEASE' already exists, skipping."
             else
               echo "Creating back-merge PR to '$RELEASE'..."
-              gh pr create \
+              if PR_URL=$(gh pr create \
+                --repo "$REPO" \
                 --base "$RELEASE" \
                 --head "$MERGE_BRANCH_REL" \
                 --title "Merge hotfix $TAG into $RELEASE" \
-                --body "Automated back-merge of hotfix $TAG into $RELEASE. Resolve any conflicts and merge."
+                --body "Automated back-merge of hotfix $TAG into $RELEASE. Resolve any conflicts and merge." 2>&1); then
+                echo "Created back-merge PR: $PR_URL"
+              else
+                echo "::warning::Failed to create back-merge PR to '$RELEASE': $PR_URL"
+                echo "Create it manually: https://github.com/$REPO/compare/$RELEASE...$MERGE_BRANCH_REL"
+              fi
             fi
           done
